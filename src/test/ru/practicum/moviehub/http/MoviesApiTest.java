@@ -16,10 +16,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MoviesApiTest {
+    private static final String BASE = "http://localhost:8080";
+    private static MoviesServer server;
+    private static HttpClient client;
 
     @BeforeAll
     static void beforeAll() {
+        server = new MoviesServer(8080);
+        server.start();
 
+         client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(2))
+                .build();
     }
 
     @BeforeEach
@@ -29,44 +37,29 @@ public class MoviesApiTest {
 
     @AfterAll
     static void afterAll() {
-
+        server.stop();
     }
 
     @Test
     void getMovies_whenEmpty_returnsEmptyArray() throws Exception {
-        // Создайте HTTP-клиент,
-        // укажите таймаут соединения (connectTimeout), равный 2 секундам
-        HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(2))
-                .build();
-
-        // создайте объект GET-запроса на эндпоинт /movies
+        // Создайте и запустите MoviesServer
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8080/movie"))
+                .uri(URI.create(BASE + "/movies"))
                 .GET()
-                .header("Content-Type", "application/json; charset=UTF-8")
                 .build();
 
-        // Обработчик тела запроса
-        HttpResponse.BodyHandler<String> responseBodyHandler =
-                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8);
-        // Отправьте запрос
-        HttpResponse<String> resp = client.send(req, responseBodyHandler);
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        // Допишите проверку кода ответа
         assertEquals(200, resp.statusCode(), "GET /movies должен вернуть 200");
 
-        // Допишите проверку заголовка Content-Type
         String contentTypeHeaderValue =
                 resp.headers().firstValue("Content-Type").orElse("");
         assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
                 "Content-Type должен содержать формат данных и кодировку");
 
-        // проверка, что был возвращён массив
         String body = resp.body().trim();
         assertTrue(body.startsWith("[") && body.endsWith("]"),
                 "Ожидается JSON-массив");
     }
-
-
 }
