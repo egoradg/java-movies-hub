@@ -23,4 +23,8 @@ public class MoviesStore {
     public void clear(){
         movies.clear();
     }
+
+    public void deleteMovie(int id){
+        movies.remove(id);
+    }
 }
