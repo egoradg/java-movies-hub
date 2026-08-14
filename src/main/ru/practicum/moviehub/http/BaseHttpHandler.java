@@ -27,6 +27,6 @@ public abstract class BaseHttpHandler implements HttpHandler {
         // !!! Реализуйте общий для всех хендлеров метод
         // для отправки ответа без тела и кодом 204
         ex.getResponseHeaders().set("Content-Type", CT_JSON);
-        ex.sendResponseHeaders(204, 0);
+        ex.sendResponseHeaders(204, -1);
     }
 }
