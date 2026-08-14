@@ -1,6 +1,7 @@
 package ru.practicum.moviehub.http;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -45,27 +47,66 @@ public class MoviesApiTest {
     }
 
     @Test
-    void getMovies_whenEmpty_returnsEmptyArray() throws Exception {
+    void getMovies() throws Exception {
         // Создайте и запустите MoviesServer
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
                 .GET()
                 .build();
 
-        HttpResponse<String> resp =
+        HttpResponse<String> resp1 =
                 client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(200, resp.statusCode(), "GET /movies должен вернуть 200");
+        assertEquals(200, resp1.statusCode(), "GET /movies должен вернуть 200");
 
         String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
+                resp1.headers().firstValue("Content-Type").orElse("");
         assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
                 "Content-Type должен содержать формат данных и кодировку");
 
-        String body = resp.body().trim();
+        String body = resp1.body().trim();
         //System.out.println(body);
         assertTrue(body.startsWith("[") && body.endsWith("]"),
                 "Ожидается JSON-массив");
+
+        HttpRequest create1 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("qwe", 1900), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create1, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest create2 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("asd", 1911), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create2, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest create3 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("zxc", 1922), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create3, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpResponse<String> resp2 =
+                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        assertEquals(200, resp2.statusCode(), "GET /movies должен вернуть 200");
+
+        String contentTypeHeaderValue2 =
+                resp2.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue2,
+                "Content-Type должен содержать формат данных и кодировку");
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        List<Movie> movies = gson.fromJson(resp2.body(), new ListOfMoviesTypeToken().getType());
+
+        assertEquals(3, movies.size(), "Ожидается JSON-массив");
+        assertEquals(new Movie(0, "qwe", 1900), movies.getFirst(), "Ожидается фильм");
+        assertEquals(new Movie(1, "asd", 1911), movies.get(1), "Ожидается фильм");
+        assertEquals(new Movie(2, "zxc", 1922), movies.getLast(), "Ожидается фильм");
+
     }
 
     @Test
@@ -110,7 +151,7 @@ public class MoviesApiTest {
     }
 
     @Test
-    void postMovieWithBadParams_returnsMovie() throws Exception {
+    void postMovieWithBadParams_returnsErrorMassage() throws Exception {
         Movie movie1 = new Movie(0, "*".repeat(101), 1887);
 
         HttpRequest req1 = HttpRequest.newBuilder()
@@ -181,5 +222,174 @@ public class MoviesApiTest {
                 "  \"title\": \"" + title + "\",\n" +
                 "  \"year\": " + year + '\n' +
                 "}";
+    }
+
+    @Test
+    void getMovieById() throws Exception {
+        HttpRequest create1 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("qwe", 1900), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create1, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest create2 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("asd", 1911), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create2, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest create3 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("zxc", 1922), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create3, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest req1 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/1"))
+                .GET()
+                .build();
+
+        HttpResponse<String> resp1 =
+                client.send(req1, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        assertEquals(200, resp1.statusCode(), "GET /movies/{id} должен вернуть 200");
+
+        String contentTypeHeaderValue =
+                resp1.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
+                "Content-Type должен содержать формат данных и кодировку");
+
+        String body = resp1.body().trim();
+        assertEquals(new Movie(1, "asd", 1911).toString(), body,
+                "Ожидается JSON-массив");
+
+        HttpRequest req2 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/10"))
+                .GET()
+                .build();
+
+        HttpResponse<String> resp2 =
+                client.send(req2, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        //поиск несуществующего элемента
+        assertEquals(404, resp2.statusCode(), "GET /movies/{id} должен вернуть 404");
+
+        HttpRequest req3 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/qwe"))
+                .GET()
+                .build();
+
+        HttpResponse<String> resp3 =
+                client.send(req3, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        //неверные входные данные
+        assertEquals(400, resp3.statusCode(), "GET /movies/{id} должен вернуть 400");
+    }
+
+    @Test
+    void deleteMovieById() throws Exception {
+        HttpRequest create1 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("qwe", 1900), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create1, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest create2 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("asd", 1911), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create2, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest create3 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("zxc", 1922), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create3, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest req1 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/1"))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> resp1 =
+                client.send(req1, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        assertEquals(204, resp1.statusCode(), "DELETE /movies/{id} должен вернуть 204");
+
+        String body = resp1.body().trim();
+        assertEquals("", body,
+                "Ожидается пустая строка");
+
+        HttpRequest req2 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/10"))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> resp2 =
+                client.send(req2, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        //удаление несуществующего элемента
+        assertEquals(404, resp2.statusCode(), "DELETE /movies/{id} должен вернуть 404");
+    }
+
+    @Test
+    void getMoviesByYear() throws Exception {
+        HttpRequest create1 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("qwe", 1988), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create1, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest create2 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("asd", 1911), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create2, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest create3 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson("zxc", 1988), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        client.send(create3, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        HttpRequest req1 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies?year=1988"))
+                .GET()
+                .build();
+
+        HttpResponse<String> resp1 =
+                client.send(req1, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        assertEquals(200, resp1.statusCode(), "GET /movies должен вернуть 200");
+
+        String contentTypeHeaderValue =
+                resp1.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
+                "Content-Type должен содержать формат данных и кодировку");
+
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        List<Movie> movies = gson.fromJson(resp1.body(), new ListOfMoviesTypeToken().getType());
+
+        assertEquals(new Movie(0, "qwe", 1988), movies.getFirst(), "Ожидается JSON-массив");
+        assertEquals(new Movie(2, "zxc", 1988), movies.getLast(), "Ожидается JSON-массив");
+
+        HttpRequest req2 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies?year=1977"))
+                .GET()
+                .build();
+
+        HttpResponse<String> resp2 =
+                client.send(req2, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        assertEquals(200, resp1.statusCode(), "GET /movies должен вернуть 200");
+
+        List<Movie> movies2 = gson.fromJson(resp2.body(), new ListOfMoviesTypeToken().getType());
+        assertTrue(movies2.isEmpty());
     }
 }

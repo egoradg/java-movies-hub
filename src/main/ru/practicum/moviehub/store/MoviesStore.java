@@ -40,11 +40,20 @@ public class MoviesStore {
             return movies.size();
 
         int id = deletedIds.getFirst();
-        if(deletedIds.size()==1)
+        if (deletedIds.size() == 1)
             deletedIds.clear();
         else
             deletedIds.remove(id);
         return id;
+    }
+
+    public String moviesOfYear(int year) {
+        Gson gson = new GsonBuilder()
+                .setPrettyPrinting()
+                .create();
+        return gson.toJson(movies.values().stream()
+                .filter(movie -> movie.getYear() == year)
+                .toList());
     }
 
     @Override

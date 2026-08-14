@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 public class MoviesHandler extends BaseHttpHandler {
     private final MoviesStore store;
@@ -39,25 +38,37 @@ public class MoviesHandler extends BaseHttpHandler {
                 return;
             }
             default:
-                System.out.println(method);
                 ex.sendResponseHeaders(405, -1);
         }
     }
 
     private void getMethod(HttpExchange ex) throws IOException {
         String[] path = ex.getRequestURI().getPath().split("/");
-        if (path[1].equals("movies")) {
-            if (path.length == 2) {
-                sendJson(ex, 200, store.toString());
-            } else if (path.length == 3) {
-                try {
-                    int id = Integer.parseInt(path[2]);
-                    Movie movie = store.getMovie(id);
-                    if(movie==null) {
-                        sendJson(ex, 400, "Фильм не найден");
-                        return;
+        if (ex.getRequestURI().getQuery() == null) {
+            if (path[1].equals("movies")) {
+                if (path.length == 2) {
+                    sendJson(ex, 200, store.toString());
+                } else if (path.length == 3) {
+                    try {
+                        int id = Integer.parseInt(path[2]);
+                        Movie movie = store.getMovie(id);
+                        if (movie == null) {
+                            sendJson(ex, 404, "Фильм не найден");
+                            return;
+                        }
+                        sendJson(ex, 200, movie.toString());
+                    } catch (NumberFormatException e) {
+                        sendJson(ex, 400, "Некорректный ID");
                     }
-                    sendJson(ex, 200, movie.toString());
+                }
+            }
+        } else {
+            if (path.length == 2) {
+                String[] params = ex.getRequestURI().getQuery().split("=");
+                try {
+                    int year = Integer.parseInt(params[1]);
+                    String response = store.moviesOfYear(year);
+                    sendJson(ex, 200, response);
                 } catch (NumberFormatException e) {
                     sendJson(ex, 400, "Некорректный ID");
                 }
@@ -115,8 +126,8 @@ public class MoviesHandler extends BaseHttpHandler {
         if (path.length == 3 && path[1].equals("movies")) {
             try {
                 int id = Integer.parseInt(path[2]);
-                Movie movie=store.getMovie(id);
-                if (movie==null){
+                Movie movie = store.getMovie(id);
+                if (movie == null) {
                     sendJson(ex, 404, "Фильм не найден");
                     return;
                 }
