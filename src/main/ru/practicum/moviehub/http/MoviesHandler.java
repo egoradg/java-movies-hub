@@ -11,7 +11,6 @@ import ru.practicum.moviehub.store.MoviesStore;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -35,9 +34,34 @@ public class MoviesHandler extends BaseHttpHandler {
                 postMethod(ex);
                 return;
             }
+            case "DELETE": {
+                deleteMethod(ex);
+                return;
+            }
             default:
                 System.out.println(method);
                 ex.sendResponseHeaders(405, -1);
+        }
+    }
+
+    private void getMethod(HttpExchange ex) throws IOException {
+        String[] path = ex.getRequestURI().getPath().split("/");
+        if (path[1].equals("movies")) {
+            if (path.length == 2) {
+                sendJson(ex, 200, store.toString());
+            } else if (path.length == 3) {
+                try {
+                    int id = Integer.parseInt(path[2]);
+                    Movie movie = store.getMovie(id);
+                    if(movie==null) {
+                        sendJson(ex, 400, "Фильм не найден");
+                        return;
+                    }
+                    sendJson(ex, 200, movie.toString());
+                } catch (NumberFormatException e) {
+                    sendJson(ex, 400, "Некорректный ID");
+                }
+            }
         }
     }
 
@@ -53,7 +77,6 @@ public class MoviesHandler extends BaseHttpHandler {
         }
 
         String requestBody = new String(ex.getRequestBody().readAllBytes());
-        //System.out.println(requestBody);
         JsonElement jsonElement = JsonParser.parseString(requestBody);
 
         if (!jsonElement.isJsonObject()) {
@@ -83,27 +106,24 @@ public class MoviesHandler extends BaseHttpHandler {
                 title,
                 jsonObject.get("year").getAsInt()
         );
-
         store.addMovie(movie);
         sendJson(ex, 201, movie.toString());
     }
 
-    private void getMethod(HttpExchange ex) throws IOException {
+    private void deleteMethod(HttpExchange ex) throws IOException {
         String[] path = ex.getRequestURI().getPath().split("/");
-        System.out.println(Arrays.toString(path));
-        if (path[1].equals("movies")) {
-            if (path.length == 2) {
-                sendJson(ex, 200, store.toString());
-            } else if (path.length == 3) {
-                try {
-                    int id = Integer.parseInt(path[2]);
-                    Movie movie = store.getMovie(id);
-                    sendJson(ex, 200, movie.toString());
-                } catch (NumberFormatException e) {
-                    sendJson(ex, 400, "Некорректный ID");
-                } catch (NoSuchElementException e) {
+        if (path.length == 3 && path[1].equals("movies")) {
+            try {
+                int id = Integer.parseInt(path[2]);
+                Movie movie=store.getMovie(id);
+                if (movie==null){
                     sendJson(ex, 404, "Фильм не найден");
+                    return;
                 }
+                store.deleteMovie(id);
+                sendNoContent(ex);
+            } catch (NumberFormatException e) {
+                sendJson(ex, 400, "Некорректный ID");
             }
         }
     }
