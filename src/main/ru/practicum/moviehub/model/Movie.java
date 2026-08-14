@@ -1,5 +1,8 @@
 package ru.practicum.moviehub.model;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import java.util.Objects;
 
 public class Movie {
@@ -37,5 +40,13 @@ public class Movie {
 
     public int getYear() {
         return year;
+    }
+
+    @Override
+    public String toString() {
+        Gson gson = new GsonBuilder()
+                .setPrettyPrinting()
+                .create();
+        return gson.toJson(this);
     }
 }
