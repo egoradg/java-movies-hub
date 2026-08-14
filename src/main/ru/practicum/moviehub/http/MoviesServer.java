@@ -33,7 +33,7 @@ public class MoviesServer {
         System.out.println("Сервер остановлен");
     }
 
-    public void clearStore(){
+    public void clearStore() {
         store.clear();
     }
 }
