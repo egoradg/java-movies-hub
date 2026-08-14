@@ -11,7 +11,9 @@ import ru.practicum.moviehub.store.MoviesStore;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 public class MoviesHandler extends BaseHttpHandler {
     private final MoviesStore store;
@@ -26,18 +28,7 @@ public class MoviesHandler extends BaseHttpHandler {
         String method = ex.getRequestMethod();
         switch (method) {
             case "GET": {
-                String[] path = ex.getRequestURI().getPath().split("/");
-                if (path[1].equals("movies")) {
-                    if (path.length == 2) {
-                        sendJson(ex, 200, store.toString());
-                    } else if (path.length == 3) {
-                        try {
-                            int id = Integer.parseInt(path[2]);
-                        } catch (NumberFormatException e) {
-                            sendJson(ex, 400, "Некорректный ID");
-                        }
-                    }
-                }
+                getMethod(ex);
                 return;
             }
             case "POST": {
@@ -97,7 +88,23 @@ public class MoviesHandler extends BaseHttpHandler {
         sendJson(ex, 201, movie.toString());
     }
 
-    private void getById(HttpExchange ex){
-
+    private void getMethod(HttpExchange ex) throws IOException {
+        String[] path = ex.getRequestURI().getPath().split("/");
+        System.out.println(Arrays.toString(path));
+        if (path[1].equals("movies")) {
+            if (path.length == 2) {
+                sendJson(ex, 200, store.toString());
+            } else if (path.length == 3) {
+                try {
+                    int id = Integer.parseInt(path[2]);
+                    Movie movie = store.getMovie(id);
+                    sendJson(ex, 200, movie.toString());
+                } catch (NumberFormatException e) {
+                    sendJson(ex, 400, "Некорректный ID");
+                } catch (NoSuchElementException e) {
+                    sendJson(ex, 404, "Фильм не найден");
+                }
+            }
+        }
     }
 }
