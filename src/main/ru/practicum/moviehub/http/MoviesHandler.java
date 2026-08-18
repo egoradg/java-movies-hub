@@ -1,0 +1,164 @@
+package ru.practicum.moviehub.http;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.sun.net.httpserver.HttpExchange;
+import ru.practicum.moviehub.api.ErrorResponse;
+import ru.practicum.moviehub.model.Movie;
+import ru.practicum.moviehub.store.MoviesStore;
+
+import java.io.IOException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MoviesHandler extends BaseHttpHandler {
+    private final MoviesStore store;
+
+    public MoviesHandler(MoviesStore store) {
+        this.store = store;
+    }
+
+    @Override
+    public void handle(HttpExchange ex) throws IOException {
+        // Напишите реализацию, удовлетворяющую тест
+        String method = ex.getRequestMethod();
+        switch (method) {
+            case "GET": {
+                getMethod(ex);
+                return;
+            }
+            case "POST": {
+                postMethod(ex);
+                return;
+            }
+            case "DELETE": {
+                deleteMethod(ex);
+                return;
+            }
+            default:
+                ex.sendResponseHeaders(405, -1);
+        }
+    }
+
+    private void getMethod(HttpExchange ex) throws IOException {
+        String[] path = ex.getRequestURI().getPath().split("/");
+        if (ex.getRequestURI().getQuery() == null) {
+            if (path[1].equals("movies")) {
+                if (path.length == 2) {
+                    sendJson(ex, 200, store.toString());
+                } else if (path.length == 3) {
+                    try {
+                        int id = Integer.parseInt(path[2]);
+                        Movie movie = store.getMovie(id);
+                        if (movie == null) {
+                            ErrorResponse error = new ErrorResponse("404 Not found",
+                                    new String[]{"Фильм не найден"});
+                            sendJson(ex, 404, error.toJson());
+                            return;
+                        }
+                        sendJson(ex, 200, movie.toString());
+                    } catch (NumberFormatException e) {
+                        ErrorResponse error = new ErrorResponse("400 Bad Request",
+                                new String[]{"Некорректный ID"});
+                        sendJson(ex, 400, error.toJson());
+                    }
+                }
+            }
+        } else {
+            if (path.length == 2) {
+                String[] params = ex.getRequestURI().getQuery().split("=");
+                if (params.length % 2 != 0) {
+                    ErrorResponse error = new ErrorResponse("400 Bad Request",
+                            new String[]{"Некорректно указаны параметры"});
+                    sendJson(ex, 400, error.toJson());
+                }
+                try {
+                    if (params[0].equals("year")) {
+                        int year = Integer.parseInt(params[1]);
+                        String response = store.moviesOfYear(year);
+                        sendJson(ex, 200, response);
+                    }
+                } catch (NumberFormatException e) {
+                    ErrorResponse error = new ErrorResponse("400 Bad Request",
+                            new String[]{"Некорректный год"});
+                    sendJson(ex, 400, error.toJson());
+                }
+            }
+        }
+    }
+
+    private void postMethod(HttpExchange ex) throws IOException {
+        List<String> details = new ArrayList<>();
+
+        if (ex.getRequestHeaders().containsKey("Content-Type")) {
+            if (!ex.getRequestHeaders().get("Content-Type").getFirst().equals(CT_JSON)) {
+                ErrorResponse errorResponse = new ErrorResponse("Unsupported Media Type", new String[]{"\"Content-Type\" must be \"" + CT_JSON + '\"'});
+                sendJson(ex, 415, errorResponse.toJson());
+                return;
+            }
+        }
+
+        String requestBody = new String(ex.getRequestBody().readAllBytes());
+        JsonElement jsonElement = JsonParser.parseString(requestBody);
+
+        if (!jsonElement.isJsonObject()) {
+            ex.sendResponseHeaders(400, -1);
+            return;
+        }
+
+        JsonObject jsonObject = jsonElement.getAsJsonObject();
+        String title = jsonObject.get("title").getAsString();
+        if (title.length() > 100 || title.isEmpty())
+            details.add("название не должно быть пустым или длиннее 100 символов");
+
+        JsonElement yearElement = jsonObject.get("year");
+        if (yearElement.isJsonPrimitive() && yearElement.getAsJsonPrimitive().isNumber()) {
+            int year = yearElement.getAsInt();
+            if (year < 0)
+                throw new UnsupportedOperationException("год должен быть числом");
+            if (year < 1888 || year > LocalDate.now().getYear() + 1) {
+                details.add("год должен быть между 1888 и " + (LocalDate.now().getYear() + 1));
+            }
+        } else {
+            details.add("год должен быть числом");
+        }
+
+        if (!details.isEmpty()) {
+            ErrorResponse errorResponse = new ErrorResponse("Unprocessable Entity", details.toArray(new String[0]));
+            sendJson(ex, 422, errorResponse.toJson());
+            return;
+        }
+
+        Movie movie = new Movie(
+                store.getNextId(),
+                title,
+                jsonObject.get("year").getAsInt()
+        );
+        store.addMovie(movie);
+        sendJson(ex, 201, movie.toString());
+    }
+
+    private void deleteMethod(HttpExchange ex) throws IOException {
+        String[] path = ex.getRequestURI().getPath().split("/");
+        if (path.length == 3 && path[1].equals("movies")) {
+            try {
+                int id = Integer.parseInt(path[2]);
+                Movie movie = store.getMovie(id);
+                if (movie == null) {
+                    ErrorResponse error = new ErrorResponse("404 Not found",
+                            new String[]{"Фильм не найден"});
+                    sendJson(ex, 404, error.toJson());
+                    return;
+                }
+                store.deleteMovie(id);
+                sendNoContent(ex);
+            } catch (NumberFormatException e) {
+                ErrorResponse error = new ErrorResponse("400 Bad Request",
+                        new String[]{"Некорректный ID"});
+                sendJson(ex, 400, error.toJson());
+            }
+        }
+    }
+}
