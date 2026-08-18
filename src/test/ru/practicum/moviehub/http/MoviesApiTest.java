@@ -457,7 +457,7 @@ public class MoviesApiTest {
     }
 
     @Test
-    void MethodNotAllowed() throws Exception {
+    void methodNotAllowed() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
                 .PUT(HttpRequest.BodyPublishers.ofString(getJson("qwe", 1988), StandardCharsets.UTF_8))
