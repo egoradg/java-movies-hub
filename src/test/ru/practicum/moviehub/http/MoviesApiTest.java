@@ -112,26 +112,43 @@ public class MoviesApiTest {
 
     @Test
     void postMovie_returnsMovie() throws Exception {
-        Movie movie = new Movie(0, "star wars", 1888);
+        Movie movie1 = new Movie(0, "star wars", 1888);
 
-        HttpRequest req = HttpRequest.newBuilder()
+        HttpRequest req1 = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
-                .POST(HttpRequest.BodyPublishers.ofString(getJson(movie.getTitle(), movie.getYear()), StandardCharsets.UTF_8))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson(movie1.getTitle(), movie1.getYear()), StandardCharsets.UTF_8))
                 .header("Content-Type", "application/json; charset=UTF-8")
                 .build();
 
-        HttpResponse<String> resp =
-                client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        HttpResponse<String> resp1 =
+                client.send(req1, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(201, resp.statusCode(), "POST /movies должен вернуть 201");
+        assertEquals(201, resp1.statusCode(), "POST /movies должен вернуть 201");
 
-        String contentTypeHeaderValue =
-                resp.headers().firstValue("Content-Type").orElse("");
-        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue,
+        String contentTypeHeaderValue1 =
+                resp1.headers().firstValue("Content-Type").orElse("");
+        assertEquals("application/json; charset=UTF-8", contentTypeHeaderValue1,
                 "Content-Type должен содержать формат данных и кодировку");
 
-        String body = resp.body().trim();
-        assertEquals(movie.toString(), body,
+        String body1 = resp1.body().trim();
+        assertEquals(movie1.toString(), body1,
+                "Ожидается фильм в JSON");
+
+        Movie movie2 = new Movie(1, "star wars", LocalDate.now().getYear() + 1);
+
+        HttpRequest req2 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson(movie2.getTitle(), movie2.getYear()), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+
+        HttpResponse<String> resp2 =
+                client.send(req2, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        assertEquals(201, resp2.statusCode(), "POST /movies должен вернуть 201");
+
+        String body2 = resp2.body().trim();
+        assertEquals(movie2.toString(), body2,
                 "Ожидается фильм в JSON");
     }
 
@@ -437,5 +454,16 @@ public class MoviesApiTest {
 
         List<Movie> movies2 = gson.fromJson(resp2.body(), new ListOfMoviesTypeToken().getType());
         assertTrue(movies2.isEmpty());
+    }
+
+    @Test
+    void MethodNotAllowed() throws Exception {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .PUT(HttpRequest.BodyPublishers.ofString(getJson("qwe", 1988), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        assertEquals(405, resp.statusCode(), "405 Method Not Allowed");
     }
 }
