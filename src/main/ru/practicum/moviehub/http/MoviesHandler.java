@@ -70,13 +70,13 @@ public class MoviesHandler extends BaseHttpHandler {
         } else {
             if (path.length == 2) {
                 String[] params = ex.getRequestURI().getQuery().split("=");
-                if(params.length%2!=0){
+                if (params.length % 2 != 0) {
                     ErrorResponse error = new ErrorResponse("400 Bad Request",
                             new String[]{"Некорректно указаны параметры"});
                     sendJson(ex, 400, error.toJson());
                 }
                 try {
-                    if(params[0].equals("year")) {
+                    if (params[0].equals("year")) {
                         int year = Integer.parseInt(params[1]);
                         String response = store.moviesOfYear(year);
                         sendJson(ex, 200, response);
@@ -111,12 +111,12 @@ public class MoviesHandler extends BaseHttpHandler {
 
         JsonObject jsonObject = jsonElement.getAsJsonObject();
         String title = jsonObject.get("title").getAsString();
-        if (title.length() > 100)
+        if (title.length() > 100 || title.isEmpty())
             details.add("название не должно быть пустым или длиннее 100 символов");
 
         int year = jsonObject.get("year").getAsInt();
-        if (year < 1888 || year > LocalDate.now().getYear()) {
-            details.add("год должен быть между 1888 и " + LocalDate.now().getYear());
+        if (year < 1888 || year > LocalDate.now().getYear() + 1) {
+            details.add("год должен быть между 1888 и " + (LocalDate.now().getYear() + 1));
         }
 
         if (!details.isEmpty()) {
