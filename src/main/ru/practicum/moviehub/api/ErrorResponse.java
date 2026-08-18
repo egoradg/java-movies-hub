@@ -1,6 +1,7 @@
 package ru.practicum.moviehub.api;
 
-import java.util.Arrays;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class ErrorResponse {
     private final String error;
@@ -11,9 +12,9 @@ public class ErrorResponse {
         this.details = details;
     }
 
-    @Override
-    public String toString() {
-        return "Ошибка " + error +
-                "\nДетали: " + Arrays.toString(details);
+    public String toJson() {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+        return gson.toJson(this);
     }
 }
