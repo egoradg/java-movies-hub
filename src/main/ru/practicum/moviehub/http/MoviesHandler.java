@@ -11,7 +11,6 @@ import ru.practicum.moviehub.store.MoviesStore;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class MoviesHandler extends BaseHttpHandler {
@@ -114,9 +113,16 @@ public class MoviesHandler extends BaseHttpHandler {
         if (title.length() > 100 || title.isEmpty())
             details.add("название не должно быть пустым или длиннее 100 символов");
 
-        int year = jsonObject.get("year").getAsInt();
-        if (year < 1888 || year > LocalDate.now().getYear() + 1) {
-            details.add("год должен быть между 1888 и " + (LocalDate.now().getYear() + 1));
+        JsonElement yearElement = jsonObject.get("year");
+        if (yearElement.isJsonPrimitive() && yearElement.getAsJsonPrimitive().isNumber()) {
+            int year = yearElement.getAsInt();
+            if (year < 0)
+                throw new UnsupportedOperationException("год должен быть числом");
+            if (year < 1888 || year > LocalDate.now().getYear() + 1) {
+                details.add("год должен быть между 1888 и " + (LocalDate.now().getYear() + 1));
+            }
+        } else {
+            details.add("год должен быть числом");
         }
 
         if (!details.isEmpty()) {

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ru.practicum.moviehub.api.ErrorResponse;
 import ru.practicum.moviehub.model.Movie;
 import ru.practicum.moviehub.store.MoviesStore;
 
@@ -111,11 +112,11 @@ public class MoviesApiTest {
 
     @Test
     void postMovie_returnsMovie() throws Exception {
-        Movie movie1 = new Movie(0, "star wars", 1888);
+        Movie movie = new Movie(0, "star wars", 1888);
 
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
-                .POST(HttpRequest.BodyPublishers.ofString(getJson(movie1.getTitle(), movie1.getYear()), StandardCharsets.UTF_8))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson(movie.getTitle(), movie.getYear()), StandardCharsets.UTF_8))
                 .header("Content-Type", "application/json; charset=UTF-8")
                 .build();
 
@@ -130,7 +131,7 @@ public class MoviesApiTest {
                 "Content-Type должен содержать формат данных и кодировку");
 
         String body = resp.body().trim();
-        assertEquals(movie1.toString(), body,
+        assertEquals(movie.toString(), body,
                 "Ожидается фильм в JSON");
     }
 
@@ -166,9 +167,12 @@ public class MoviesApiTest {
         assertEquals(422, resp1.statusCode(), "POST /movies должен вернуть 422");
 
         String body1 = resp1.body().trim();
+        ErrorResponse errorResponse1 = new ErrorResponse("Unprocessable Entity",
+                new String[]{"название не должно быть пустым или длиннее 100 символов",
+                        "год должен быть между 1888 и " + (LocalDate.now().getYear() + 1)
+                });
         assertEquals(
-                "Ошибка Unprocessable Entity\n"
-                        + "Детали: [название не должно быть пустым или длиннее 100 символов, год должен быть между 1888 и " + LocalDate.now().getYear() + "]",
+                errorResponse1.toJson(),
                 body1,
                 "Ожидается ошибка для 2 параметров"
         );
@@ -188,9 +192,10 @@ public class MoviesApiTest {
         assertEquals(422, resp2.statusCode(), "POST /movies должен вернуть 422");
 
         String body2 = resp2.body().trim();
+        ErrorResponse errorResponse2 = new ErrorResponse("Unprocessable Entity",
+                new String[]{"год должен быть между 1888 и " + (LocalDate.now().getYear() + 1)});
         assertEquals(
-                "Ошибка Unprocessable Entity\n"
-                        + "Детали: [год должен быть между 1888 и " + LocalDate.now().getYear() + "]",
+                errorResponse2.toJson(),
                 body2,
                 "Ожидается ошибка для года"
         );
@@ -206,14 +211,55 @@ public class MoviesApiTest {
         HttpResponse<String> resp3 =
                 client.send(req3, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-        assertEquals(422, resp1.statusCode(), "POST /movies должен вернуть 422");
+        assertEquals(422, resp3.statusCode(), "POST /movies должен вернуть 422");
 
         String body3 = resp3.body().trim();
+        ErrorResponse errorResponse3 = new ErrorResponse("Unprocessable Entity",
+                new String[]{"название не должно быть пустым или длиннее 100 символов"});
         assertEquals(
-                "Ошибка Unprocessable Entity\n"
-                        + "Детали: [название не должно быть пустым или длиннее 100 символов]",
+                errorResponse3.toJson(),
                 body3,
                 "Ожидается ошибка для названия"
+        );
+
+        Movie movie4 = new Movie(2, "", 1888);
+
+        HttpRequest req4 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString(getJson(movie3.getTitle(), movie3.getYear()), StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+
+        HttpResponse<String> resp4 =
+                client.send(req4, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        assertEquals(422, resp4.statusCode(), "POST /movies должен вернуть 422");
+
+        String body4 = resp4.body().trim();
+        assertEquals(
+                errorResponse3.toJson(),
+                body4,
+                "Ожидается ошибка для названия"
+        );
+
+        HttpRequest req5 = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .POST(HttpRequest.BodyPublishers.ofString("{ \"title\": \"star wars\", \"year\": \"qwe\"}", StandardCharsets.UTF_8))
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .build();
+
+        HttpResponse<String> resp5 =
+                client.send(req5, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        assertEquals(422, resp2.statusCode(), "POST /movies должен вернуть 422");
+
+        String body5 = resp5.body().trim();
+        ErrorResponse errorResponse5 = new ErrorResponse("Unprocessable Entity",
+                new String[]{"год должен быть числом"});
+        assertEquals(
+                errorResponse5.toJson(),
+                body5,
+                "Ожидается ошибка для года"
         );
     }
 
